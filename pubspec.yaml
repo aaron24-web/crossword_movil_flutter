@@ -10,12 +10,12 @@ dependencies:
   flutter:
     sdk: flutter
   built_collection: ^5.1.1
-  built_value: ^8.10.1
+  built_value:
   characters: ^1.4.0
-  flutter_riverpod: ^2.6.1
+  flutter_riverpod:
   intl: ^0.20.2
-  riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
+  riverpod:
+  riverpod_annotation:
   two_dimensional_scrollables: ^0.3.7
 
 dev_dependencies:
@@ -23,12 +23,12 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   build_runner: ^2.5.4
-  built_value_generator: ^8.10.1
-  custom_lint: ^0.7.6
-  riverpod_generator: ^2.6.5
-  riverpod_lint: ^2.6.5
+  built_value_generator:
+  custom_lint:
+  riverpod_generator:
+  riverpod_lint:
 
 flutter:
   uses-material-design: true
-assets:                                       # Add this line
+  assets:
     - assets/words.txt
