@@ -1,15 +1,16 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:built_collection/built_collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'isolates.dart';
 import 'model.dart' as model;
-import 'utils.dart';
 
 part 'providers.g.dart';
+
+const backgroundWorkerCount = 4;                           // Add this line
 
 /// A provider for the wordlist to use when generating the crossword.
 @riverpod
@@ -61,47 +62,108 @@ class Size extends _$Size {
   }
 }
 
-final _random = Random();
-
 @riverpod
-Stream<model.Crossword> crossword(Ref ref) async* {
+Stream<model.WorkQueue> workQueue(Ref ref) async* {
   final size = ref.watch(sizeProvider);
   final wordListAsync = ref.watch(wordListProvider);
-
-  var crossword = model.Crossword.crossword(
+  final emptyCrossword = model.Crossword.crossword(
     width: size.width,
     height: size.height,
   );
+  final emptyWorkQueue = model.WorkQueue.from(
+    crossword: emptyCrossword,
+    candidateWords: BuiltSet<String>(),
+    startLocation: model.Location.at(0, 0),
+  );
 
   yield* wordListAsync.when(
-    data: (wordList) async* {
-      while (crossword.characters.length < size.width * size.height * 0.8) {
-        final word = wordList.randomElement();
-        final direction = _random.nextBool()
-            ? model.Direction.across
-            : model.Direction.down;
-        final location = model.Location.at(
-          _random.nextInt(size.width),
-          _random.nextInt(size.height),
-        );
-
-        crossword = crossword.addWord(
-          word: word,
-          direction: direction,
-          location: location,
-        );
-        yield crossword;
-        await Future.delayed(Duration(milliseconds: 100));
-      }
-
-      yield crossword;
-    },
+    data: (wordList) => exploreCrosswordSolutions(
+      crossword: emptyCrossword,
+      wordList: wordList,
+      maxWorkerCount: backgroundWorkerCount,
+    ),
     error: (error, stackTrace) async* {
       debugPrint('Error loading word list: $error');
-      yield crossword;
+      yield emptyWorkQueue;
     },
     loading: () async* {
-      yield crossword;
+      yield emptyWorkQueue;
     },
   );
 }
+
+@riverpod                                                 // Add from here to end of file
+class Puzzle extends _$Puzzle {
+  model.CrosswordPuzzleGame _puzzle = model.CrosswordPuzzleGame.from(
+    crossword: model.Crossword.crossword(width: 0, height: 0),
+    candidateWords: BuiltSet<String>(),
+  );
+
+  @override
+  model.CrosswordPuzzleGame build() {
+    final size = ref.watch(sizeProvider);
+    final wordList = ref.watch(wordListProvider).value;
+    final workQueue = ref.watch(workQueueProvider).value;
+
+    if (wordList != null &&
+        workQueue != null &&
+        workQueue.isCompleted &&
+        (_puzzle.crossword.height != size.height ||
+            _puzzle.crossword.width != size.width ||
+            _puzzle.crossword != workQueue.crossword)) {
+      compute(_puzzleFromCrosswordTrampoline, (
+        workQueue.crossword,
+        wordList,
+      )).then((puzzle) {
+        _puzzle = puzzle;
+        ref.invalidateSelf();
+      });
+    }
+
+    return _puzzle;
+  }
+
+  Future<void> selectWord({
+    required model.Location location,
+    required String word,
+    required model.Direction direction,
+  }) async {
+    final candidate = await compute(_puzzleSelectWordTrampoline, (
+      _puzzle,
+      location,
+      word,
+      direction,
+    ));
+
+    if (candidate != null) {
+      _puzzle = candidate;
+      ref.invalidateSelf();
+    } else {
+      debugPrint('Invalid word selection: $word');
+    }
+  }
+
+  bool canSelectWord({
+    required model.Location location,
+    required String word,
+    required model.Direction direction,
+  }) {
+    return _puzzle.canSelectWord(
+      location: location,
+      word: word,
+      direction: direction,
+    );
+  }
+}
+
+// Trampoline functions to disentangle these Isolate target calls from the
+// unsendable reference to the [Puzzle] provider.
+
+Future<model.CrosswordPuzzleGame> _puzzleFromCrosswordTrampoline(
+  (model.Crossword, BuiltSet<String>) args,
+) async =>
+    model.CrosswordPuzzleGame.from(crossword: args.$1, candidateWords: args.$2);
+
+model.CrosswordPuzzleGame? _puzzleSelectWordTrampoline(
+  (model.CrosswordPuzzleGame, model.Location, String, model.Direction) args,
+) => args.$1.selectWord(location: args.$2, word: args.$3, direction: args.$4);

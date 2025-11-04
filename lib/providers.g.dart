@@ -110,41 +110,95 @@ abstract class _$Size extends $Notifier<CrosswordSize> {
   }
 }
 
-@ProviderFor(crossword)
-const crosswordProvider = CrosswordProvider._();
+@ProviderFor(workQueue)
+const workQueueProvider = WorkQueueProvider._();
 
-final class CrosswordProvider
+final class WorkQueueProvider
     extends
         $FunctionalProvider<
-          AsyncValue<model.Crossword>,
-          model.Crossword,
-          Stream<model.Crossword>
+          AsyncValue<model.WorkQueue>,
+          model.WorkQueue,
+          Stream<model.WorkQueue>
         >
-    with $FutureModifier<model.Crossword>, $StreamProvider<model.Crossword> {
-  const CrosswordProvider._()
+    with $FutureModifier<model.WorkQueue>, $StreamProvider<model.WorkQueue> {
+  const WorkQueueProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'crosswordProvider',
+        name: r'workQueueProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$crosswordHash();
+  String debugGetCreateSourceHash() => _$workQueueHash();
 
   @$internal
   @override
-  $StreamProviderElement<model.Crossword> $createElement(
+  $StreamProviderElement<model.WorkQueue> $createElement(
     $ProviderPointer pointer,
   ) => $StreamProviderElement(pointer);
 
   @override
-  Stream<model.Crossword> create(Ref ref) {
-    return crossword(ref);
+  Stream<model.WorkQueue> create(Ref ref) {
+    return workQueue(ref);
   }
 }
 
-String _$crosswordHash() => r'5de9f05091b3f0dad7c14a322ba090df2e63fae0';
+String _$workQueueHash() => r'297192935b85a20243519048088822c6ff30dbac';
+
+@ProviderFor(Puzzle)
+const puzzleProvider = PuzzleProvider._();
+
+final class PuzzleProvider
+    extends $NotifierProvider<Puzzle, model.CrosswordPuzzleGame> {
+  const PuzzleProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'puzzleProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$puzzleHash();
+
+  @$internal
+  @override
+  Puzzle create() => Puzzle();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(model.CrosswordPuzzleGame value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<model.CrosswordPuzzleGame>(value),
+    );
+  }
+}
+
+String _$puzzleHash() => r'dddad218b4318b008af2db67dd0ff284bcef3231';
+
+abstract class _$Puzzle extends $Notifier<model.CrosswordPuzzleGame> {
+  model.CrosswordPuzzleGame build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref =
+        this.ref as $Ref<model.CrosswordPuzzleGame, model.CrosswordPuzzleGame>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<model.CrosswordPuzzleGame, model.CrosswordPuzzleGame>,
+              model.CrosswordPuzzleGame,
+              Object?,
+              Object?
+            >;
+    element.handleValue(ref, created);
+  }
+}
